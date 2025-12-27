@@ -1,0 +1,87 @@
+[package]
+name = "eywa"
+version = "0.1.0"
+edition = "2021"
+description = "Personal knowledge base with local embeddings and vector search"
+
+# Build as both library (for Flutter) and binary (for CLI/Docker)
+[lib]
+name = "eywa"
+crate-type = ["cdylib", "rlib", "staticlib"]
+
+[[bin]]
+name = "eywa"
+path = "src/main.rs"
+
+[dependencies]
+# Vector database
+lancedb = "0.15"
+arrow-array = "53"
+arrow-schema = "53"
+
+# Embeddings (candle - pure Rust, no ONNX conflicts)
+candle-core = "0.8"
+candle-nn = "0.8"
+candle-transformers = "0.8"
+hf-hub = "0.4"
+tokenizers = "0.21"
+
+# HTTP server
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+
+# HTTP client (for URL fetching and model downloads)
+reqwest = { version = "0.12", features = ["json", "stream"] }
+futures-util = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+colored = "2"
+
+# TUI (Claude Code-style REPL)
+ratatui = "0.29"
+crossterm = "0.28"
+
+# Progress bars
+indicatif = "0.17"
+
+# Utils
+anyhow = "1"
+thiserror = "1"
+chrono = "0.4"
+uuid = { version = "1", features = ["v4"] }
+md5 = "0.7"
+walkdir = "2"
+glob = "0.3"
+zip = "2"
+dirs = "5"
+
+# Chunking
+pulldown-cmark = "0.12"
+
+# HTML to Markdown (for web scraping)
+fast_html2md = "0.0.48"
+
+# Content storage (SQLite + compression)
+rusqlite = { version = "0.31", features = ["bundled"] }
+zstd = "0.13"
+
+# BM25 search
+tantivy = "0.22"
+
+# Async
+futures = "0.3"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+opt-level = 3
+lto = false
+strip = true

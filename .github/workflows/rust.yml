@@ -1,0 +1,34 @@
+  name: Rust
+
+  on:
+    push:
+      tags:
+        - 'v*'
+
+  env:
+    CARGO_TERM_COLOR: always
+
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: Install Protobuf
+          run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+        - name: Install Rust
+          uses: dtolnay/rust-toolchain@stable
+
+        - name: Cache dependencies
+          uses: Swatinem/rust-cache@v2
+
+        - name: Build
+          run: cargo build --verbose
+
+        - name: Initialize Eywa
+          run: cargo run -- init --default
+
+        - name: Run tests
+          run: cargo test --verbose

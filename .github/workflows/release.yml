@@ -1,0 +1,130 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: eywa-darwin-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact: eywa-darwin-x64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: eywa-linux-x64
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            artifact: eywa-linux-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Protobuf
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            brew install protobuf
+          else
+            sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          fi
+        shell: bash
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Rename binary
+        run: |
+          mv target/${{ matrix.target }}/release/eywa ${{ matrix.artifact }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/eywa-darwin-arm64/eywa-darwin-arm64
+            artifacts/eywa-darwin-x64/eywa-darwin-x64
+            artifacts/eywa-linux-x64/eywa-linux-x64
+            artifacts/eywa-linux-arm64/eywa-linux-arm64
+          generate_release_notes: true
+
+  update-formula:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Download artifacts for SHA
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Update Formula
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+
+          SHA_ARM64=$(sha256sum artifacts/eywa-darwin-arm64/eywa-darwin-arm64 | cut -d ' ' -f1)
+          SHA_X64=$(sha256sum artifacts/eywa-darwin-x64/eywa-darwin-x64 | cut -d ' ' -f1)
+          SHA_LINUX=$(sha256sum artifacts/eywa-linux-x64/eywa-linux-x64 | cut -d ' ' -f1)
+          SHA_LINUX_ARM64=$(sha256sum artifacts/eywa-linux-arm64/eywa-linux-arm64 | cut -d ' ' -f1)
+
+          # Update version
+          sed -i "s/version \".*\"/version \"$VERSION\"/" Formula/eywa.rb
+
+          # Update SHA256 values (matches both placeholders and existing hashes)
+          sed -i "s/sha256 \".*\" # arm64/sha256 \"$SHA_ARM64\" # arm64/" Formula/eywa.rb
+          sed -i "s/sha256 \".*\" # x64/sha256 \"$SHA_X64\" # x64/" Formula/eywa.rb
+          sed -i "s/sha256 \".*\" # linux-x64/sha256 \"$SHA_LINUX\" # linux-x64/" Formula/eywa.rb
+          sed -i "s/sha256 \".*\" # linux-arm64/sha256 \"$SHA_LINUX_ARM64\" # linux-arm64/" Formula/eywa.rb
+
+      - name: Commit Formula update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/eywa.rb
+          git commit -m "Update formula to ${GITHUB_REF#refs/tags/}"
+          git push

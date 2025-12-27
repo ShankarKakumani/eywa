@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tab Styles Demo - Eywa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #4ecdc4;
+            margin-bottom: 40px;
+            font-size: 28px;
+        }
+
+        .demo-section {
+            margin-bottom: 50px;
+        }
+
+        .demo-section h2 {
+            color: #888;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .tabs-container {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        /* Current Style (Underline) */
+        .tabs-underline {
+            display: flex;
+            gap: 40px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 0;
+        }
+
+        .tabs-underline .tab {
+            color: #888;
+            padding: 12px 0;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .tabs-underline .tab.active {
+            color: #4ecdc4;
+        }
+
+        .tabs-underline .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #4ecdc4;
+            border-radius: 3px 3px 0 0;
+        }
+
+        /* Style 1: Pill/Capsule */
+        .tabs-pill {
+            display: flex;
+            gap: 10px;
+        }
+
+        .tabs-pill .tab {
+            color: #888;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 25px;
+            transition: all 0.2s;
+        }
+
+        .tabs-pill .tab.active {
+            color: #fff;
+            background: #4ecdc4;
+        }
+
+        .tabs-pill .tab:hover:not(.active) {
+            background: rgba(78, 205, 196, 0.1);
+        }
+
+        /* Style 2: Segmented Control */
+        .tabs-segmented {
+            display: inline-flex;
+            background: #0f0f1a;
+            border-radius: 10px;
+            padding: 4px;
+        }
+
+        .tabs-segmented .tab {
+            color: #888;
+            padding: 10px 24px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .tabs-segmented .tab.active {
+            color: #fff;
+            background: #4ecdc4;
+        }
+
+        /* Style 3: Filled Background */
+        .tabs-filled {
+            display: flex;
+            gap: 5px;
+        }
+
+        .tabs-filled .tab {
+            color: #888;
+            padding: 12px 24px;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s;
+            background: #0f0f1a;
+        }
+
+        .tabs-filled .tab.active {
+            color: #4ecdc4;
+            background: #1e3a5f;
+        }
+
+        /* Style 4: With Icons */
+        .tabs-icons {
+            display: flex;
+            gap: 30px;
+            border-bottom: 1px solid #333;
+        }
+
+        .tabs-icons .tab {
+            color: #888;
+            padding: 12px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .tabs-icons .tab.active {
+            color: #4ecdc4;
+        }
+
+        .tabs-icons .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #4ecdc4;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .tabs-icons .icon {
+            font-size: 18px;
+        }
+
+        /* Style 5: Floating Pills */
+        .tabs-floating {
+            display: flex;
+            gap: 12px;
+        }
+
+        .tabs-floating .tab {
+            color: #888;
+            padding: 12px 24px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s;
+            background: #0f0f1a;
+        }
+
+        .tabs-floating .tab.active {
+            color: #fff;
+            background: linear-gradient(135deg, #4ecdc4, #44a3aa);
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+        }
+
+        /* Style 6: Bordered */
+        .tabs-bordered {
+            display: flex;
+            gap: 10px;
+        }
+
+        .tabs-bordered .tab {
+            color: #888;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tabs-bordered .tab.active {
+            color: #4ecdc4;
+            border-color: #4ecdc4;
+        }
+
+        .tabs-bordered .tab:hover:not(.active) {
+            border-color: #444;
+        }
+
+        /* Style 7: Top Border Indicator */
+        .tabs-top-border {
+            display: flex;
+            gap: 0;
+        }
+
+        .tabs-top-border .tab {
+            color: #888;
+            padding: 15px 30px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            background: #0f0f1a;
+        }
+
+        .tabs-top-border .tab.active {
+            color: #4ecdc4;
+            background: #1a1a2e;
+        }
+
+        .tabs-top-border .tab.active::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #4ecdc4;
+        }
+
+        /* Style 8: Minimal Text */
+        .tabs-minimal {
+            display: flex;
+            gap: 40px;
+        }
+
+        .tabs-minimal .tab {
+            color: #555;
+            padding: 10px 0;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tabs-minimal .tab.active {
+            color: #fff;
+        }
+
+        .tabs-minimal .tab:hover:not(.active) {
+            color: #888;
+        }
+
+        /* Style 9: Gradient Background */
+        .tabs-gradient {
+            display: flex;
+            gap: 10px;
+        }
+
+        .tabs-gradient .tab {
+            color: #888;
+            padding: 12px 24px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .tabs-gradient .tab.active {
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* Style 10: Vertical/Sidebar */
+        .tabs-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-width: 200px;
+        }
+
+        .tabs-sidebar .tab {
+            color: #888;
+            padding: 12px 20px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tabs-sidebar .tab.active {
+            color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.1);
+            border-left: 3px solid #4ecdc4;
+        }
+
+        .tabs-sidebar .tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Style 11: Card Tabs */
+        .tabs-card-wrapper {
+            background: #1e3a5f;
+            border-radius: 0 12px 12px 12px;
+            padding: 20px;
+            margin-top: -1px;
+        }
+
+        .tabs-card {
+            display: flex;
+            gap: 0;
+        }
+
+        .tabs-card .tab {
+            color: #888;
+            padding: 12px 24px;
+            cursor: pointer;
+            background: #0f0f1a;
+            border-radius: 12px 12px 0 0;
+            margin-right: 2px;
+            transition: all 0.2s;
+        }
+
+        .tabs-card .tab.active {
+            color: #4ecdc4;
+            background: #1e3a5f;
+        }
+
+        /* Style 12: Icon Only */
+        .tabs-icon-only {
+            display: flex;
+            gap: 5px;
+        }
+
+        .tabs-icon-only .tab {
+            color: #888;
+            padding: 12px 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+
+        .tabs-icon-only .tab.active {
+            color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.1);
+        }
+
+        .tabs-icon-only .tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-tooltip {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tab Styles for Eywa</h1>
+
+    <div class="demo-section">
+        <h2>Current Style - Underline</h2>
+        <div class="tabs-container">
+            <div class="tabs-underline">
+                <div class="tab active">Dashboard</div>
+                <div class="tab">Add Documents</div>
+                <div class="tab">File Explorer</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>1. Pill / Capsule</h2>
+        <div class="tabs-container">
+            <div class="tabs-pill">
+                <div class="tab active">Dashboard</div>
+                <div class="tab">Add Documents</div>
+                <div class="tab">File Explorer</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>2. Segmented Control (iOS Style)</h2>
+        <div class="tabs-container">
+            <div class="tabs-segmented">
+                <div class="tab active">Dashboard</div>
+                <div class="tab">Add Documents</div>
+                <div class="tab">File Explorer</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>3. Filled Background</h2>
+        <div class="tabs-container">
+            <div class="tabs-filled">
+                <div class="tab active">Dashboard</div>
+                <div class="tab">Add Documents</div>
+                <div class="tab">File Explorer</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>4. With Icons</h2>
+        <div class="tabs-container">
+            <div class="tabs-icons">
+                <div class="tab active"><span class="icon">📊</span> Dashboard</div>
+                <div class="tab"><span class="icon">📄</span> Add Documents</div>
+                <div class="tab"><span class="icon">📁</span> File Explorer</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>5. Floating Pills with Shadow</h2>
+        <div class="tabs-container">
+            <div class="tabs-floating">
+                <div class="tab active">Dashboard</div>
+                <div class="tab">Add Documents</div>
+                <div class="tab">File Explorer</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>6. Bordered</h2>
+        <div class="tabs-container">
+            <div class="tabs-bordered">
+                <div class="tab active">Dashboard</div>
+                <div class="tab">Add Documents</div>
+                <div class="tab">File Explorer</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>7. Top Border Indicator</h2>
+        <div class="tabs-container">
+            <div class="tabs-top-border">
+                <div class="tab active">Dashboard</div>
+                <div class="tab">Add Documents</div>
+                <div class="tab">File Explorer</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>8. Minimal Text</h2>
+        <div class="tabs-container">
+            <div class="tabs-minimal">
+                <div class="tab active">Dashboard</div>
+                <div class="tab">Add Documents</div>
+                <div class="tab">File Explorer</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>9. Gradient Background</h2>
+        <div class="tabs-container">
+            <div class="tabs-gradient">
+                <div class="tab active">Dashboard</div>
+                <div class="tab">Add Documents</div>
+                <div class="tab">File Explorer</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>10. Vertical Sidebar</h2>
+        <div class="tabs-container">
+            <div class="tabs-sidebar">
+                <div class="tab active"><span class="icon">📊</span> Dashboard</div>
+                <div class="tab"><span class="icon">📄</span> Add Documents</div>
+                <div class="tab"><span class="icon">📁</span> File Explorer</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>11. Card Tabs</h2>
+        <div class="tabs-container" style="background: transparent; padding: 0;">
+            <div class="tabs-card">
+                <div class="tab active">Dashboard</div>
+                <div class="tab">Add Documents</div>
+                <div class="tab">File Explorer</div>
+            </div>
+            <div class="tabs-card-wrapper">
+                Content area connects to active tab
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>12. Icon Only (Compact)</h2>
+        <div class="tabs-container">
+            <div class="tabs-icon-only">
+                <div class="tab active" title="Dashboard">📊</div>
+                <div class="tab" title="Add Documents">📄</div>
+                <div class="tab" title="File Explorer">📁</div>
+            </div>
+            <div style="display: flex; gap: 5px; margin-top: 5px;">
+                <div class="tab-tooltip" style="width: 44px;">Dashboard</div>
+                <div class="tab-tooltip" style="width: 44px;">Add</div>
+                <div class="tab-tooltip" style="width: 44px;">Files</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add click interactivity
+        document.querySelectorAll('.tabs-underline, .tabs-pill, .tabs-segmented, .tabs-filled, .tabs-icons, .tabs-floating, .tabs-bordered, .tabs-top-border, .tabs-minimal, .tabs-gradient, .tabs-sidebar, .tabs-card, .tabs-icon-only').forEach(tabGroup => {
+            tabGroup.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabGroup.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

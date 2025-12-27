@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eywa - Knowledge Base</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-left" onclick="App.switchTab('dashboard')" style="cursor: pointer">
+            <svg class="logo-icon" width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Owl body -->
+                <ellipse cx="50" cy="58" rx="35" ry="32" fill="url(#bodyGradient)"/>
+                <!-- Owl head -->
+                <circle cx="50" cy="35" r="28" fill="url(#headGradient)"/>
+                <!-- Left ear tuft -->
+                <path d="M25 18 Q30 8 35 20" stroke="url(#earGradient)" stroke-width="4" fill="none" stroke-linecap="round"/>
+                <!-- Right ear tuft -->
+                <path d="M75 18 Q70 8 65 20" stroke="url(#earGradient)" stroke-width="4" fill="none" stroke-linecap="round"/>
+                <!-- Left eye socket -->
+                <circle cx="38" cy="35" r="14" fill="#1a1a2e"/>
+                <!-- Right eye socket -->
+                <circle cx="62" cy="35" r="14" fill="#1a1a2e"/>
+                <!-- Left eye -->
+                <circle cx="38" cy="35" r="10" fill="url(#eyeGradient)"/>
+                <!-- Right eye -->
+                <circle cx="62" cy="35" r="10" fill="url(#eyeGradient)"/>
+                <!-- Left pupil -->
+                <circle cx="40" cy="34" r="4" fill="#0f0f1a"/>
+                <!-- Right pupil -->
+                <circle cx="64" cy="34" r="4" fill="#0f0f1a"/>
+                <!-- Eye shine left -->
+                <circle cx="36" cy="32" r="2" fill="#fff" opacity="0.8"/>
+                <!-- Eye shine right -->
+                <circle cx="60" cy="32" r="2" fill="#fff" opacity="0.8"/>
+                <!-- Beak -->
+                <path d="M50 42 L46 50 L50 48 L54 50 Z" fill="#ff9f43"/>
+                <!-- Chest pattern -->
+                <ellipse cx="50" cy="65" rx="18" ry="15" fill="url(#chestGradient)" opacity="0.6"/>
+                <!-- Gradients -->
+                <defs>
+                    <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#667eea"/>
+                        <stop offset="100%" stop-color="#764ba2"/>
+                    </linearGradient>
+                    <linearGradient id="headGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#764ba2"/>
+                        <stop offset="100%" stop-color="#667eea"/>
+                    </linearGradient>
+                    <linearGradient id="earGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#9b6dd6"/>
+                        <stop offset="100%" stop-color="#667eea"/>
+                    </linearGradient>
+                    <radialGradient id="eyeGradient" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#00ffff"/>
+                        <stop offset="100%" stop-color="#00d9ff"/>
+                    </radialGradient>
+                    <radialGradient id="chestGradient" cx="50%" cy="30%" r="70%">
+                        <stop offset="0%" stop-color="#e0e0e0"/>
+                        <stop offset="100%" stop-color="#a0a0c0"/>
+                    </radialGradient>
+                </defs>
+            </svg>
+            <span class="logo">Eywa</span>
+        </div>
+        <div class="header-right">
+            <div class="actions"></div>
+            <span class="version">v0.1.0</span>
+        </div>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab active" data-tab="dashboard">Dashboard</button>
+        <button class="tab" data-tab="add-docs">Add Documents</button>
+        <button class="tab" data-tab="explorer">File Explorer</button>
+    </nav>
+
+    <main class="container">
+        <div id="dashboard" class="panel active"></div>
+        <div id="add-docs" class="panel"></div>
+        <div id="explorer" class="panel"></div>
+    </main>
+
+    <!-- Document Preview Modal -->
+    <div class="modal-overlay" id="docModal">
+        <div class="modal modal-large modal-preview">
+            <div class="modal-header">
+                <div class="modal-title-row">
+                    <span class="modal-icon">📄</span>
+                    <h3 id="docModalTitle">Document</h3>
+                </div>
+                <button class="modal-close" onclick="closeDocModal()">&times;</button>
+            </div>
+            <div class="modal-header-accent"></div>
+            <div class="modal-body">
+                <div class="modal-meta" id="docModalMeta"></div>
+                <pre id="docModalContent" class="doc-preview-content"></pre>
+            </div>
+            <div class="modal-footer" id="docModalFooter">
+                <button class="secondary" onclick="closeDocModal()">Close</button>
+                <button onclick="Explorer.exportCurrentDoc()">Export</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/api.js"></script>
+    <script src="/jobs.js"></script>
+    <script src="/dashboard.js"></script>
+    <script src="/add-docs.js"></script>
+    <script src="/explorer.js"></script>
+    <script src="/app.js"></script>
+</body>
+</html>

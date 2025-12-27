@@ -1,0 +1,9 @@
+/target
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+.fastembed_cache/
+.eywa/
+docs/

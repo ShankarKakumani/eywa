@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eywa - Knowledge Base</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1 { color: #00d9ff; margin-bottom: 20px; }
+        h2 { color: #00d9ff; margin: 20px 0 15px; font-size: 1.1em; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; background: #16213e; border: none; color: #eee; cursor: pointer; border-radius: 5px; }
+        .tab.active { background: #00d9ff; color: #000; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #333; border-radius: 5px; background: #16213e; color: #eee; font-size: 16px; }
+        textarea { min-height: 150px; resize: vertical; }
+        button { padding: 12px 24px; background: #00d9ff; color: #000; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background: #00b8d9; }
+        button:disabled { background: #444; color: #888; cursor: not-allowed; }
+        button.danger { background: #ff4757; color: #fff; }
+        button.secondary { background: #444; color: #fff; }
+        .results { margin-top: 20px; }
+        .result { background: #16213e; padding: 15px; margin-bottom: 10px; border-radius: 5px; border-left: 3px solid #00d9ff; }
+        .result h3 { color: #00d9ff; margin-bottom: 5px; }
+        .result .meta { color: #888; font-size: 14px; margin-bottom: 10px; }
+        .result .content { white-space: pre-wrap; font-family: monospace; font-size: 14px; max-height: 200px; overflow-y: auto; }
+        .source-item { background: #16213e; padding: 15px; margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .doc-item { background: #0f3460; padding: 10px 15px; margin: 5px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .actions { display: flex; gap: 10px; }
+        .message { padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .message.success { background: #2ecc71; color: #000; }
+        .message.error { background: #ff4757; }
+        .loading { text-align: center; padding: 20px; color: #888; }
+        .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .form-row input { flex: 1; margin-bottom: 0; }
+
+        /* Drop zone styles */
+        .drop-zone {
+            border: 2px dashed #444;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #00d9ff;
+            background: rgba(0, 217, 255, 0.1);
+        }
+        .drop-zone-icon { font-size: 48px; margin-bottom: 10px; }
+        .drop-zone-text { color: #888; margin-bottom: 10px; }
+        .drop-zone-hint { color: #666; font-size: 12px; }
+        .file-input { display: none; }
+
+        /* File list styles */
+        .file-list { margin: 15px 0; max-height: 200px; overflow-y: auto; }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #0f3460;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .file-item .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-item .file-size { color: #888; margin-left: 10px; }
+        .file-item .file-remove { color: #ff4757; cursor: pointer; margin-left: 10px; }
+
+        /* URL input styles */
+        .url-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #333; }
+
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #16213e;
+            border-radius: 10px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+        }
+        .modal-header h3 { color: #00d9ff; margin: 0; }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .modal-close:hover { color: #fff; }
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .modal-body pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .modal-meta { color: #888; font-size: 14px; margin-bottom: 15px; }
+
+        /* Progress bar */
+        .progress-container { margin: 15px 0; display: none; }
+        .progress-container.active { display: block; }
+        .progress-bar {
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #00d9ff;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .progress-text { font-size: 12px; color: #888; margin-top: 5px; }
+
+        /* Section divider */
+        .section-divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: #666;
+        }
+        .section-divider::before,
+        .section-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #333;
+        }
+        .section-divider span { padding: 0 15px; font-size: 12px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Eywa Knowledge Base</h1>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('search')">Search</button>
+            <button class="tab" onclick="showTab('add')">Add Docs</button>
+            <button class="tab" onclick="showTab('sources')">Sources</button>
+        </div>
+
+        <!-- Search Panel -->
+        <div id="search" class="panel active">
+            <input type="text" id="searchQuery" placeholder="Search your knowledge base..." onkeypress="if(event.key==='Enter')search()">
+            <button onclick="search()">Search</button>
+            <div id="searchResults" class="results"></div>
+        </div>
+
+        <!-- Add Docs Panel -->
+        <div id="add" class="panel">
+            <div class="form-row">
+                <input type="text" id="sourceId" placeholder="Source name (e.g., team-docs)">
+            </div>
+
+            <!-- File Upload Section -->
+            <h2>Upload Files</h2>
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-icon">📁</div>
+                <div class="drop-zone-text">Drag & drop files here, or click to browse</div>
+                <div class="drop-zone-hint">Supports: md, txt, rs, py, js, ts, json, yaml, html, css, and more</div>
+            </div>
+            <input type="file" id="fileInput" class="file-input" multiple accept=".md,.txt,.rs,.py,.js,.ts,.tsx,.jsx,.go,.java,.c,.cpp,.h,.hpp,.json,.yaml,.yml,.toml,.xml,.html,.css,.scss,.sql,.sh,.bash,.zsh,.fish,.dart,.swift,.kt,.kts,.rb,.php,.vue,.svelte">
+            <input type="file" id="folderInput" class="file-input" webkitdirectory>
+
+            <div class="actions" style="margin-bottom: 15px;">
+                <button class="secondary" onclick="document.getElementById('fileInput').click()">Select Files</button>
+                <button class="secondary" onclick="document.getElementById('folderInput').click()">Select Folder</button>
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="progress-container" id="uploadProgress">
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="progress-text" id="progressText">Uploading...</div>
+            </div>
+
+            <button id="uploadBtn" onclick="uploadFiles()" disabled>Upload Files</button>
+
+            <div class="section-divider"><span>or paste content</span></div>
+
+            <!-- Text Input Section -->
+            <input type="text" id="docTitle" placeholder="Document title (optional)">
+            <textarea id="docContent" placeholder="Paste your document content here..."></textarea>
+            <button onclick="addDoc()">Add Text Document</button>
+
+            <div class="section-divider"><span>or fetch from URL</span></div>
+
+            <!-- URL Section -->
+            <div class="form-row">
+                <input type="url" id="urlInput" placeholder="https://example.com/page-to-ingest">
+                <button onclick="fetchUrl()" style="flex-shrink: 0;">Fetch URL</button>
+            </div>
+
+            <div id="addMessage"></div>
+        </div>
+
+        <!-- Sources Panel -->
+        <div id="sources" class="panel">
+            <div class="actions" style="margin-bottom: 20px;">
+                <button onclick="loadSources()">Refresh</button>
+                <button class="secondary" onclick="exportAll()">Export All</button>
+                <button class="danger" onclick="resetAll()">Reset All</button>
+            </div>
+            <div id="sourcesList"></div>
+        </div>
+    </div>
+
+    <!-- Document Preview Modal -->
+    <div class="modal-overlay" id="docModal" onclick="if(event.target===this)closeModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Document</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-meta" id="modalMeta"></div>
+                <pre id="modalContent"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '/api';
+        let selectedFiles = [];
+
+        // Supported file extensions
+        const SUPPORTED_EXTENSIONS = new Set([
+            'md', 'txt', 'rs', 'py', 'js', 'ts', 'tsx', 'jsx', 'go', 'java',
+            'c', 'cpp', 'h', 'hpp', 'json', 'yaml', 'yml', 'toml', 'xml',
+            'html', 'css', 'scss', 'sql', 'sh', 'bash', 'zsh', 'fish',
+            'dart', 'swift', 'kt', 'kts', 'rb', 'php', 'vue', 'svelte'
+        ]);
+
+        function showTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelector(`[onclick="showTab('${name}')"]`).classList.add('active');
+            document.getElementById(name).classList.add('active');
+            if (name === 'sources') loadSources();
+        }
+
+        // ==================== File Upload ====================
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const folderInput = document.getElementById('folderInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        folderInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function getFileExtension(filename) {
+            const parts = filename.split('.');
+            return parts.length > 1 ? parts.pop().toLowerCase() : '';
+        }
+
+        function handleFiles(fileList) {
+            const newFiles = Array.from(fileList).filter(file => {
+                const ext = getFileExtension(file.name);
+                return SUPPORTED_EXTENSIONS.has(ext);
+            });
+
+            // Add to selected files (avoid duplicates by name+size)
+            newFiles.forEach(file => {
+                const exists = selectedFiles.some(f => f.name === file.name && f.size === file.size);
+                if (!exists) {
+                    selectedFiles.push(file);
+                }
+            });
+
+            renderFileList();
+        }
+
+        function renderFileList() {
+            const list = document.getElementById('fileList');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (selectedFiles.length === 0) {
+                list.innerHTML = '';
+                uploadBtn.disabled = true;
+                return;
+            }
+
+            uploadBtn.disabled = false;
+            list.innerHTML = selectedFiles.map((file, index) => `
+                <div class="file-item">
+                    <span class="file-name" title="${file.webkitRelativePath || file.name}">
+                        ${file.webkitRelativePath || file.name}
+                    </span>
+                    <span class="file-size">${formatSize(file.size)}</span>
+                    <span class="file-remove" onclick="removeFile(${index})">&#x2715;</span>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        async function uploadFiles() {
+            if (selectedFiles.length === 0) return;
+
+            const sourceId = document.getElementById('sourceId').value || 'uploads';
+            const msg = document.getElementById('addMessage');
+            const progress = document.getElementById('uploadProgress');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            progress.classList.add('active');
+            uploadBtn.disabled = true;
+            msg.innerHTML = '';
+            progressText.textContent = 'Reading files...';
+
+            // Read all files first
+            const documents = [];
+            for (const file of selectedFiles) {
+                try {
+                    const content = await readFileContent(file);
+                    const title = file.webkitRelativePath || file.name;
+                    documents.push({ content, title, file_path: title });
+                } catch (e) {
+                    console.error(`Failed to read ${file.name}:`, e);
+                }
+            }
+
+            if (documents.length === 0) {
+                progress.classList.remove('active');
+                uploadBtn.disabled = false;
+                msg.innerHTML = '<div class="message error">No files could be read</div>';
+                return;
+            }
+
+            progressText.textContent = 'Queuing documents...';
+
+            try {
+                // Queue all documents at once
+                const res = await fetch(`${API}/queue`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source_id: sourceId, documents })
+                });
+
+                const data = await res.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                const jobId = data.job_id;
+                progressText.textContent = `Queued ${data.docs_queued} documents. Processing...`;
+
+                // Poll for progress
+                await pollJobProgress(jobId, progressFill, progressText, msg);
+
+            } catch (e) {
+                progress.classList.remove('active');
+                uploadBtn.disabled = false;
+                msg.innerHTML = `<div class="message error">Error: ${e.message}</div>`;
+                return;
+            }
+
+            progress.classList.remove('active');
+            uploadBtn.disabled = false;
+            selectedFiles = [];
+            renderFileList();
+        }
+
+        async function pollJobProgress(jobId, progressFill, progressText, msg) {
+            return new Promise((resolve) => {
+                const poll = async () => {
+                    try {
+                        const res = await fetch(`${API}/jobs/${jobId}`);
+                        const job = await res.json();
+
+                        if (job.error) {
+                            msg.innerHTML = `<div class="message error">Error: ${job.error}</div>`;
+                            resolve();
+                            return;
+                        }
+
+                        const completed = job.completed + job.failed;
+                        const percent = job.total > 0 ? (completed / job.total) * 100 : 0;
+                        progressFill.style.width = `${percent}%`;
+
+                        if (job.current_doc) {
+                            progressText.textContent = `Processing: ${job.current_doc} (${completed}/${job.total})`;
+                        } else {
+                            progressText.textContent = `Processing... (${completed}/${job.total})`;
+                        }
+
+                        if (job.status === 'done' || job.status === 'failed') {
+                            const statusClass = job.failed > 0 ? 'error' : 'success';
+                            let message = `Completed: ${job.completed} document(s) processed.`;
+                            if (job.failed > 0) {
+                                message += ` ${job.failed} failed.`;
+                            }
+                            msg.innerHTML = `<div class="message ${statusClass}">${message}</div>`;
+                            resolve();
+                            return;
+                        }
+
+                        // Continue polling
+                        setTimeout(poll, 500);
+                    } catch (e) {
+                        msg.innerHTML = `<div class="message error">Polling error: ${e.message}</div>`;
+                        resolve();
+                    }
+                };
+
+                poll();
+            });
+        }
+
+        function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsText(file);
+            });
+        }
+
+        // ==================== URL Fetching ====================
+
+        async function fetchUrl() {
+            const url = document.getElementById('urlInput').value.trim();
+            const sourceId = document.getElementById('sourceId').value || 'web';
+            const msg = document.getElementById('addMessage');
+
+            if (!url) {
+                msg.innerHTML = '<div class="message error">Please enter a URL</div>';
+                return;
+            }
+
+            msg.innerHTML = '<div class="loading">Fetching URL...</div>';
+
+            try {
+                const res = await fetch(`${API}/fetch-url`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, source_id: sourceId })
+                });
+
+                const data = await res.json();
+
+                if (data.error) {
+                    msg.innerHTML = `<div class="message error">Error: ${data.error}</div>`;
+                } else {
+                    msg.innerHTML = `<div class="message success">
+                        Fetched "${data.title || url}"<br>
+                        ${data.documents_created} document(s), ${data.chunks_created} chunks created.
+                    </div>`;
+                    document.getElementById('urlInput').value = '';
+                }
+            } catch (e) {
+                msg.innerHTML = `<div class="message error">Error: ${e.message}</div>`;
+            }
+        }
+
+        // ==================== Search ====================
+
+        async function search() {
+            const query = document.getElementById('searchQuery').value;
+            if (!query) return;
+
+            const results = document.getElementById('searchResults');
+            results.innerHTML = '<div class="loading">Searching...</div>';
+
+            try {
+                const res = await fetch(`${API}/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, limit: 10 })
+                });
+                const data = await res.json();
+
+                if (data.results.length === 0) {
+                    results.innerHTML = '<div class="message">No results found.</div>';
+                    return;
+                }
+
+                results.innerHTML = data.results.map(r => `
+                    <div class="result">
+                        <h3>${escapeHtml(r.title || 'Untitled')}</h3>
+                        <div class="meta">
+                            Source: ${escapeHtml(r.source_id)} | Score: ${r.score.toFixed(3)}
+                            ${r.file_path ? ` | File: ${escapeHtml(r.file_path)}` : ''}
+                        </div>
+                        <div class="content">${escapeHtml(r.content)}</div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                results.innerHTML = `<div class="message error">Error: ${e.message}</div>`;
+            }
+        }
+
+        // ==================== Add Text Document ====================
+
+        async function addDoc() {
+            const sourceId = document.getElementById('sourceId').value || 'default';
+            const title = document.getElementById('docTitle').value;
+            const content = document.getElementById('docContent').value;
+            const msg = document.getElementById('addMessage');
+
+            if (!content) {
+                msg.innerHTML = '<div class="message error">Please enter content</div>';
+                return;
+            }
+
+            msg.innerHTML = '<div class="loading">Adding document...</div>';
+
+            try {
+                const res = await fetch(`${API}/ingest`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        source_id: sourceId,
+                        documents: [{ content, title: title || null }]
+                    })
+                });
+                const data = await res.json();
+
+                msg.innerHTML = `<div class="message success">
+                    Added ${data.documents_created} document(s), ${data.chunks_created} chunks created.
+                </div>`;
+                document.getElementById('docContent').value = '';
+                document.getElementById('docTitle').value = '';
+            } catch (e) {
+                msg.innerHTML = `<div class="message error">Error: ${e.message}</div>`;
+            }
+        }
+
+        // ==================== Sources Management ====================
+
+        async function loadSources() {
+            const list = document.getElementById('sourcesList');
+            list.innerHTML = '<div class="loading">Loading sources...</div>';
+
+            try {
+                const res = await fetch(`${API}/sources`);
+                const data = await res.json();
+
+                if (data.sources.length === 0) {
+                    list.innerHTML = '<div class="message">No sources yet. Add some documents!</div>';
+                    return;
+                }
+
+                list.innerHTML = '';
+                for (const s of data.sources) {
+                    const div = document.createElement('div');
+                    div.className = 'source-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${escapeHtml(s.name)}</strong>
+                            <span style="color:#888"> (${s.chunk_count} chunks)</span>
+                        </div>
+                        <div class="actions">
+                            <button class="secondary" onclick="toggleDocs('${escapeAttr(s.id)}', this)">Show Docs</button>
+                            <button class="secondary" onclick="exportSource('${escapeAttr(s.id)}')">Export</button>
+                            <button class="danger" onclick="deleteSource('${escapeAttr(s.id)}')">Delete</button>
+                        </div>
+                    `;
+                    const docsDiv = document.createElement('div');
+                    docsDiv.id = `docs-${s.id}`;
+                    docsDiv.style.display = 'none';
+                    list.appendChild(div);
+                    list.appendChild(docsDiv);
+                }
+            } catch (e) {
+                list.innerHTML = `<div class="message error">Error: ${e.message}</div>`;
+            }
+        }
+
+        async function toggleDocs(sourceId, btn) {
+            const docsDiv = document.getElementById(`docs-${sourceId}`);
+            if (docsDiv.style.display === 'none') {
+                docsDiv.style.display = 'block';
+                btn.textContent = 'Hide Docs';
+                docsDiv.innerHTML = '<div class="loading">Loading...</div>';
+
+                try {
+                    const res = await fetch(`${API}/sources/${encodeURIComponent(sourceId)}/docs`);
+                    const data = await res.json();
+
+                    docsDiv.innerHTML = data.documents.map(d => `
+                        <div class="doc-item">
+                            <div>
+                                <strong>${escapeHtml(d.title)}</strong>
+                                <span style="color:#888"> (${d.chunk_count} chunks, ${d.content_length} chars)</span>
+                            </div>
+                            <div class="actions">
+                                <button class="secondary" onclick="viewDoc('${escapeAttr(d.id)}')">View</button>
+                                <button class="danger" onclick="deleteDoc('${escapeAttr(d.id)}')">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } catch (e) {
+                    docsDiv.innerHTML = `<div class="message error">Error: ${e.message}</div>`;
+                }
+            } else {
+                docsDiv.style.display = 'none';
+                btn.textContent = 'Show Docs';
+            }
+        }
+
+        // ==================== Document Preview Modal ====================
+
+        async function viewDoc(docId) {
+            const modal = document.getElementById('docModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMeta = document.getElementById('modalMeta');
+            const modalContent = document.getElementById('modalContent');
+
+            modalTitle.textContent = 'Loading...';
+            modalMeta.textContent = '';
+            modalContent.textContent = '';
+            modal.classList.add('active');
+
+            try {
+                const res = await fetch(`${API}/docs/${encodeURIComponent(docId)}`);
+                const doc = await res.json();
+
+                if (doc.error) {
+                    modalTitle.textContent = 'Error';
+                    modalContent.textContent = doc.error;
+                } else {
+                    modalTitle.textContent = doc.title || 'Untitled';
+                    modalMeta.innerHTML = `
+                        Source: ${escapeHtml(doc.source_id || 'Unknown')} |
+                        ${doc.content ? doc.content.length : 0} characters
+                        ${doc.file_path ? ` | File: ${escapeHtml(doc.file_path)}` : ''}
+                    `;
+                    modalContent.textContent = doc.content || '';
+                }
+            } catch (e) {
+                modalTitle.textContent = 'Error';
+                modalContent.textContent = `Failed to load document: ${e.message}`;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('docModal').classList.remove('active');
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // ==================== Other Actions ====================
+
+        async function deleteDoc(docId) {
+            if (!confirm('Delete this document?')) return;
+            try {
+                await fetch(`${API}/docs/${encodeURIComponent(docId)}`, { method: 'DELETE' });
+                loadSources();
+            } catch (e) {
+                alert('Error deleting document');
+            }
+        }
+
+        async function deleteSource(sourceId) {
+            if (!confirm(`Delete source "${sourceId}" and all its documents?`)) return;
+            try {
+                await fetch(`${API}/sources/${encodeURIComponent(sourceId)}`, { method: 'DELETE' });
+                loadSources();
+            } catch (e) {
+                alert('Error deleting source');
+            }
+        }
+
+        function exportSource(sourceId) {
+            window.location.href = `${API}/sources/${encodeURIComponent(sourceId)}/export`;
+        }
+
+        function exportAll() {
+            window.location.href = `${API}/export`;
+        }
+
+        async function resetAll() {
+            if (!confirm('This will DELETE ALL data. Are you sure?')) return;
+            if (!confirm('Really? This cannot be undone!')) return;
+            try {
+                await fetch(`${API}/reset`, { method: 'DELETE' });
+                loadSources();
+                alert('All data has been reset.');
+            } catch (e) {
+                alert('Error resetting data');
+            }
+        }
+
+        // ==================== Utilities ====================
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeAttr(text) {
+            if (!text) return '';
+            return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
