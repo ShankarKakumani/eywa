@@ -25,6 +25,9 @@ jobs:
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             artifact: eywa-linux-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: eywa-windows-x64
 
     runs-on: ${{ matrix.os }}
 
@@ -32,13 +35,15 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Protobuf
+        shell: bash
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
             brew install protobuf
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            choco install protoc
           else
             sudo apt-get update && sudo apt-get install -y protobuf-compiler
           fi
-        shell: bash
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -54,14 +59,28 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Rename binary
+        if: runner.os != 'Windows'
+        run: mv target/${{ matrix.target }}/release/eywa ${{ matrix.artifact }}
+
+      - name: Build MSI installer
+        if: runner.os == 'Windows'
         run: |
-          mv target/${{ matrix.target }}/release/eywa ${{ matrix.artifact }}
+          cargo install cargo-wix
+          cargo wix --no-build --nocapture
+
+      - name: Rename MSI
+        if: runner.os == 'Windows'
+        shell: bash
+        run: mv target/wix/*.msi ${{ matrix.artifact }}.msi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}
+            ${{ matrix.artifact }}.msi
+          if-no-files-found: ignore
 
   release:
     needs: build
@@ -85,6 +104,7 @@ jobs:
             artifacts/eywa-darwin-x64/eywa-darwin-x64
             artifacts/eywa-linux-x64/eywa-linux-x64
             artifacts/eywa-linux-arm64/eywa-linux-arm64
+            artifacts/eywa-windows-x64/eywa-windows-x64.msi
           generate_release_notes: true
 
   update-formula:
