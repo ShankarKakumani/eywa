@@ -36,6 +36,7 @@ impl TextChunker {
     }
 
     /// Count lines in content up to a position
+    #[allow(dead_code)]
     fn count_lines_before(content: &str, target: &str) -> u32 {
         if let Some(pos) = content.find(target) {
             content[..pos].lines().count() as u32 + 1

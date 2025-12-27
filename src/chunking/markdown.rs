@@ -11,6 +11,7 @@ use super::{create_chunk, Chunk, ChunkMetadata, Chunker, DocMetadata, MIN_CHUNK,
 /// Header-aware chunker for Markdown files
 pub struct MarkdownChunker {
     target_size: usize,
+    #[allow(dead_code)]
     overlap: usize,
 }
 
@@ -59,6 +60,7 @@ impl MarkdownChunker {
     }
 
     /// Extract header text from markdown events
+    #[allow(dead_code)]
     fn extract_header_text(content: &str, start_offset: usize) -> Option<String> {
         // Find the end of the line starting at offset
         let remaining = &content[start_offset..];
