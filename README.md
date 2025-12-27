@@ -8,6 +8,9 @@
 [![Tests](https://github.com/ShankarKakumani/eywa/actions/workflows/rust.yml/badge.svg)](https://github.com/ShankarKakumani/eywa/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org/)
+[![GitHub stars](https://img.shields.io/github/stars/ShankarKakumani/eywa?style=social)](https://github.com/ShankarKakumani/eywa/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/ShankarKakumani/eywa?style=social)](https://github.com/ShankarKakumani/eywa/network/members)
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=ShankarKakumani.eywa)
 
 > The memory your team never loses.
 
@@ -77,8 +80,7 @@ Query
 ### Homebrew (macOS/Linux)
 
 ```bash
-brew tap ShankarKakumani/eywa
-brew install eywa
+brew install ShankarKakumani/eywa/eywa
 ```
 
 ### Download Binary
@@ -101,6 +103,16 @@ curl -L https://github.com/ShankarKakumani/eywa/releases/latest/download/eywa-li
 chmod +x eywa && sudo mv eywa /usr/local/bin/
 ```
 
+**Linux (ARM64)**
+```bash
+curl -L https://github.com/ShankarKakumani/eywa/releases/latest/download/eywa-linux-arm64 -o eywa
+chmod +x eywa && sudo mv eywa /usr/local/bin/
+```
+
+**Windows**
+
+Download the MSI installer from [releases](https://github.com/ShankarKakumani/eywa/releases/latest) and double-click to install.
+
 ### Build from Source
 
 ```bash
@@ -113,15 +125,37 @@ sudo cp target/release/eywa /usr/local/bin/
 ## Quick Start
 
 ```bash
-# Ingest documents
-eywa ingest --source docs /path/to/documents
+# Start the web portal
+eywa serve
 
-# Search
-eywa search "how does authentication work"
-
-# Start HTTP server
-eywa serve --port 3000
+# Open in browser
+open http://localhost:8005
 ```
+
+That's it! Use the web portal to add documents, search, and manage your knowledge base.
+
+## Web Portal
+
+The web portal is the primary way to interact with Eywa. Start it with:
+
+```bash
+eywa serve
+```
+
+Then open **http://localhost:8005** in your browser.
+
+| Tab | Description |
+|-----|-------------|
+| **Dashboard** | Search your knowledge base, view stats |
+| **Add Documents** | Upload files, paste text, or fetch URLs |
+| **File Explorer** | Browse, preview, and manage all documents |
+
+**Features:**
+- Drag & drop file uploads
+- Real-time search with hybrid retrieval
+- Document preview with syntax highlighting
+- Export documents as ZIP
+- Background ingestion with progress tracking
 
 ## CLI Reference
 
@@ -133,7 +167,7 @@ eywa serve --port 3000
 | `eywa docs <source>` | List documents in a source |
 | `eywa delete <source>` | Delete a source |
 | `eywa reset` | Delete all data |
-| `eywa serve -p <port>` | Start HTTP server (default: 3000) |
+| `eywa serve -p <port>` | Start HTTP server (default: 8005) |
 | `eywa mcp` | Start MCP server |
 | `eywa info` | Show model and database info |
 
@@ -141,14 +175,14 @@ eywa serve --port 3000
 
 ### Search
 ```bash
-curl -X POST http://localhost:3000/api/search \
+curl -X POST http://localhost:8005/api/search \
   -H "Content-Type: application/json" \
   -d '{"query": "authentication flow", "limit": 5}'
 ```
 
 ### Ingest Documents
 ```bash
-curl -X POST http://localhost:3000/api/ingest \
+curl -X POST http://localhost:8005/api/ingest \
   -H "Content-Type: application/json" \
   -d '{
     "source_id": "docs",
