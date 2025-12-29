@@ -1,7 +1,7 @@
 //! Info and storage command handlers
 
 use anyhow::Result;
-use eywa::Config;
+use eywa::{gpu_support_info, Config};
 use crate::utils::{dir_size, format_bytes, lance_db_size, scan_hf_cache};
 use std::path::Path;
 
@@ -19,10 +19,21 @@ pub fn run_info(data_dir: &str) -> Result<()> {
                 config.reranker_model.name(),
                 config.reranker_model.size_mb()
             );
+            println!("Device:    {} (preference: {})",
+                config.device.name(),
+                config.device.name()
+            );
         }
         None => {
             println!("Not initialized. Run 'eywa' or 'eywa init' to set up.");
         }
+    }
+
+    // Show GPU support info
+    let gpu_info = gpu_support_info();
+    println!("\nGPU Support: {}", gpu_info.summary());
+    if !gpu_info.any_gpu() {
+        println!("  Rebuild with --features metal (macOS) or --features cuda (NVIDIA)");
     }
 
     println!("\nDatabase: LanceDB (file-based)");

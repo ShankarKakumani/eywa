@@ -15,6 +15,12 @@ cargo build
 # Build release version (optimized, with LTO)
 cargo build --release
 
+# Build with GPU acceleration (macOS Apple Silicon)
+cargo build --release --features metal
+
+# Build with GPU acceleration (NVIDIA)
+cargo build --release --features cuda
+
 # Run CLI
 cargo run -- <command>
 
@@ -23,6 +29,20 @@ cargo test
 
 # Run a single test
 cargo test <test_name>
+```
+
+## GPU Acceleration
+
+Eywa supports GPU acceleration via Candle feature flags:
+
+- **Metal** (macOS Apple Silicon): `--features metal`
+- **CUDA** (NVIDIA GPUs): `--features cuda`
+
+The device is auto-detected at runtime. Use `eywa info` to see current GPU support status.
+
+Config file (`~/.eywa/config.toml`) supports device preference:
+```toml
+device = "Auto"  # Auto, Cpu, Metal, or Cuda
 ```
 
 ## CLI Commands

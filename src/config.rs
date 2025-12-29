@@ -6,6 +6,37 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// Device preference for compute
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub enum DevicePreference {
+    /// Automatically detect best available device (GPU if available, else CPU)
+    #[default]
+    Auto,
+    /// Force CPU usage
+    Cpu,
+    /// Force Metal GPU (macOS Apple Silicon)
+    Metal,
+    /// Force CUDA GPU (NVIDIA)
+    Cuda,
+}
+
+impl DevicePreference {
+    /// Display name
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Cpu => "cpu",
+            Self::Metal => "metal",
+            Self::Cuda => "cuda",
+        }
+    }
+
+    /// Get all available options
+    pub fn all() -> Vec<Self> {
+        vec![Self::Auto, Self::Cpu, Self::Metal, Self::Cuda]
+    }
+}
+
 /// Available embedding models
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum EmbeddingModel {
@@ -152,6 +183,9 @@ pub struct Config {
     pub embedding_model: EmbeddingModel,
     /// Selected reranker model
     pub reranker_model: RerankerModel,
+    /// Device preference (auto, cpu, metal, cuda)
+    #[serde(default)]
+    pub device: DevicePreference,
     /// Version of config schema (for future migrations)
     #[serde(default = "default_version")]
     pub version: u32,
@@ -166,6 +200,7 @@ impl Default for Config {
         Self {
             embedding_model: EmbeddingModel::default(),
             reranker_model: RerankerModel::default(),
+            device: DevicePreference::default(),
             version: 1,
         }
     }

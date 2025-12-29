@@ -2,14 +2,71 @@
 //!
 //! Supports multiple embedding models configured via ~/.eywa/config.toml.
 //! No ONNX runtime - pure Rust implementation.
+//!
+//! GPU acceleration is available via feature flags:
+//! - `metal` - Apple Silicon GPU (macOS)
+//! - `cuda` - NVIDIA GPU
 
-use crate::config::{Config, EmbeddingModel};
+use crate::config::{Config, DevicePreference, EmbeddingModel};
 use anyhow::{Context, Result};
 use candle_core::{Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::models::bert::{BertModel, Config as BertConfig, DTYPE};
 use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
 use tokenizers::Tokenizer;
+
+/// Resolve the compute device based on preference and available features
+pub fn resolve_device(preference: &DevicePreference) -> Result<Device> {
+    match preference {
+        DevicePreference::Cpu => Ok(Device::Cpu),
+
+        DevicePreference::Metal => {
+            #[cfg(feature = "metal")]
+            {
+                Device::new_metal(0).context("Failed to initialize Metal device")
+            }
+            #[cfg(not(feature = "metal"))]
+            {
+                anyhow::bail!("Metal support not compiled in. Rebuild with: cargo build --features metal")
+            }
+        }
+
+        DevicePreference::Cuda => {
+            #[cfg(feature = "cuda")]
+            {
+                Device::new_cuda(0).context("Failed to initialize CUDA device")
+            }
+            #[cfg(not(feature = "cuda"))]
+            {
+                anyhow::bail!("CUDA support not compiled in. Rebuild with: cargo build --features cuda")
+            }
+        }
+
+        DevicePreference::Auto => {
+            // Try Metal first (macOS), then CUDA, fallback to CPU
+            #[cfg(feature = "metal")]
+            if let Ok(device) = Device::new_metal(0) {
+                return Ok(device);
+            }
+
+            #[cfg(feature = "cuda")]
+            if let Ok(device) = Device::new_cuda(0) {
+                return Ok(device);
+            }
+
+            Ok(Device::Cpu)
+        }
+    }
+}
+
+/// Get a human-readable name for the current device
+pub fn device_name(device: &Device) -> &'static str {
+    match device {
+        Device::Cpu => "CPU",
+        Device::Cuda(_) => "CUDA (NVIDIA GPU)",
+        Device::Metal(_) => "Metal (Apple GPU)",
+    }
+}
 
 pub struct Embedder {
     model: BertModel,
@@ -23,17 +80,26 @@ impl Embedder {
     pub fn new() -> Result<Self> {
         let config = Config::load()?
             .ok_or_else(|| anyhow::anyhow!("Eywa not initialized. Run 'eywa' or 'eywa init' first."))?;
-        Self::new_with_model(&config.embedding_model, true)
+        Self::new_with_model(&config.embedding_model, &config.device, true)
     }
 
-    /// Create a new embedder with a specific model
-    pub fn new_with_model(embedding_model: &EmbeddingModel, show_progress: bool) -> Result<Self> {
-        let device = Device::Cpu;
+    /// Create a new embedder with a specific model and device preference
+    pub fn new_with_model(
+        embedding_model: &EmbeddingModel,
+        device_pref: &DevicePreference,
+        show_progress: bool,
+    ) -> Result<Self> {
+        let device = resolve_device(device_pref)?;
         let model_id = embedding_model.hf_id();
         let dimensions = embedding_model.dimensions();
 
         if show_progress {
-            eprintln!("  {} ({} MB)", embedding_model.name(), embedding_model.size_mb());
+            eprintln!(
+                "  {} ({} MB) on {}",
+                embedding_model.name(),
+                embedding_model.size_mb(),
+                device_name(&device)
+            );
         }
 
         // Download model files from HuggingFace with progress
@@ -148,5 +214,47 @@ impl Embedder {
     /// Get embedding dimension
     pub fn dimension(&self) -> usize {
         self.dimensions
+    }
+
+    /// Get the name of the device being used
+    pub fn device_name(&self) -> &'static str {
+        device_name(&self.device)
+    }
+}
+
+/// Get info about compiled GPU support
+pub fn gpu_support_info() -> GpuSupportInfo {
+    GpuSupportInfo {
+        metal_compiled: cfg!(feature = "metal"),
+        cuda_compiled: cfg!(feature = "cuda"),
+    }
+}
+
+/// Information about GPU support
+pub struct GpuSupportInfo {
+    pub metal_compiled: bool,
+    pub cuda_compiled: bool,
+}
+
+impl GpuSupportInfo {
+    /// Check if any GPU support is compiled in
+    pub fn any_gpu(&self) -> bool {
+        self.metal_compiled || self.cuda_compiled
+    }
+
+    /// Get a summary string
+    pub fn summary(&self) -> String {
+        let mut parts = Vec::new();
+        if self.metal_compiled {
+            parts.push("Metal");
+        }
+        if self.cuda_compiled {
+            parts.push("CUDA");
+        }
+        if parts.is_empty() {
+            "None (CPU only)".to_string()
+        } else {
+            parts.join(", ")
+        }
     }
 }

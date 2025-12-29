@@ -13,21 +13,43 @@ jobs:
     strategy:
       matrix:
         include:
+          # macOS
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact: eywa-darwin-arm64
+            features: metal
           - os: macos-latest
             target: x86_64-apple-darwin
             artifact: eywa-darwin-x64
+            features: ""
+
+          # Linux CPU
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact: eywa-linux-x64
+            features: ""
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             artifact: eywa-linux-arm64
+            features: ""
+
+          # Linux CUDA
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: eywa-linux-x64-cuda
+            features: cuda
+
+          # Windows CPU
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact: eywa-windows-x64
+            features: ""
+
+          # Windows CUDA
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: eywa-windows-x64-cuda
+            features: cuda
 
     runs-on: ${{ matrix.os }}
 
@@ -55,8 +77,20 @@ jobs:
         with:
           shared-key: release-${{ matrix.target }}
 
+      - name: Install CUDA Toolkit
+        if: matrix.features == 'cuda'
+        uses: Jimver/cuda-toolkit@v0.2.18
+        with:
+          cuda: '12.4.0'
+
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        shell: bash
+        run: |
+          if [ -n "${{ matrix.features }}" ]; then
+            cargo build --release --target ${{ matrix.target }} --features ${{ matrix.features }}
+          else
+            cargo build --release --target ${{ matrix.target }}
+          fi
 
       - name: Rename binary
         if: runner.os != 'Windows'
@@ -103,8 +137,10 @@ jobs:
             artifacts/eywa-darwin-arm64/eywa-darwin-arm64
             artifacts/eywa-darwin-x64/eywa-darwin-x64
             artifacts/eywa-linux-x64/eywa-linux-x64
+            artifacts/eywa-linux-x64-cuda/eywa-linux-x64-cuda
             artifacts/eywa-linux-arm64/eywa-linux-arm64
             artifacts/eywa-windows-x64/eywa-windows-x64.msi
+            artifacts/eywa-windows-x64-cuda/eywa-windows-x64-cuda.msi
           generate_release_notes: true
 
   update-formula:

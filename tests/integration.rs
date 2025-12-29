@@ -1,19 +1,19 @@
 //! Integration tests for Eywa
 
-use eywa::{BM25Index, ContentStore, Embedder, EmbeddingModel, IngestPipeline, Ingester, SearchEngine, VectorDB};
+use eywa::{BM25Index, ContentStore, DevicePreference, Embedder, EmbeddingModel, IngestPipeline, Ingester, SearchEngine, VectorDB};
 use std::sync::Arc;
 use tempfile::tempdir;
 
 #[test]
 fn test_embedder_creates_correct_dimensions() {
-    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), false).expect("Failed to create embedder");
+    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), &DevicePreference::Cpu, false).expect("Failed to create embedder");
     // Dimension depends on configured model (384 for MiniLM, 768 for BGE)
     assert!(embedder.dimension() > 0, "Should have positive dimensions");
 }
 
 #[test]
 fn test_embedder_single_text() {
-    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), false).expect("Failed to create embedder");
+    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), &DevicePreference::Cpu, false).expect("Failed to create embedder");
     let embedding = embedder.embed("hello world").expect("Failed to embed");
 
     assert_eq!(embedding.len(), embedder.dimension());
@@ -25,7 +25,7 @@ fn test_embedder_single_text() {
 
 #[test]
 fn test_embedder_batch() {
-    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), false).expect("Failed to create embedder");
+    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), &DevicePreference::Cpu, false).expect("Failed to create embedder");
     let texts = vec!["hello".to_string(), "world".to_string(), "test".to_string()];
     let embeddings = embedder.embed_batch(&texts).expect("Failed to batch embed");
 
@@ -37,7 +37,7 @@ fn test_embedder_batch() {
 
 #[test]
 fn test_embedder_similar_texts_have_high_similarity() {
-    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), false).expect("Failed to create embedder");
+    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), &DevicePreference::Cpu, false).expect("Failed to create embedder");
 
     let emb1 = embedder.embed("The cat sat on the mat").unwrap();
     let emb2 = embedder.embed("A cat is sitting on a mat").unwrap();
@@ -118,7 +118,7 @@ async fn test_vectordb_create_and_search() {
     let dir = tempdir().expect("Failed to create temp dir");
     let data_path = dir.path();
 
-    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), false).expect("Failed to create embedder");
+    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), &DevicePreference::Cpu, false).expect("Failed to create embedder");
     let mut db = VectorDB::new(data_path.to_str().unwrap()).await.expect("Failed to create db");
 
     // Ingest a document
@@ -157,7 +157,7 @@ async fn test_deduplication() {
     let dir = tempdir().expect("Failed to create temp dir");
     let data_path = dir.path();
 
-    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), false).expect("Failed to create embedder");
+    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), &DevicePreference::Cpu, false).expect("Failed to create embedder");
     let mut db = VectorDB::new(data_path.to_str().unwrap()).await.expect("Failed to create db");
     let ingester = Ingester::new(&embedder);
 
@@ -181,7 +181,7 @@ async fn test_source_management() {
     let dir = tempdir().expect("Failed to create temp dir");
     let data_path = dir.path();
 
-    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), false).expect("Failed to create embedder");
+    let embedder = Embedder::new_with_model(&EmbeddingModel::default(), &DevicePreference::Cpu, false).expect("Failed to create embedder");
     let mut db = VectorDB::new(data_path.to_str().unwrap()).await.expect("Failed to create db");
     let ingester = Ingester::new(&embedder);
 
@@ -224,7 +224,7 @@ async fn test_ingest_pipeline_indexes_to_bm25() {
     let dir = tempdir().expect("Failed to create temp dir");
     let data_path = dir.path();
 
-    let embedder = Arc::new(Embedder::new_with_model(&EmbeddingModel::default(), false).expect("Failed to create embedder"));
+    let embedder = Arc::new(Embedder::new_with_model(&EmbeddingModel::default(), &DevicePreference::Cpu, false).expect("Failed to create embedder"));
     let bm25_index = Arc::new(BM25Index::open(data_path).expect("Failed to create BM25 index"));
     let mut db = VectorDB::new(data_path.to_str().unwrap()).await.expect("Failed to create db");
 
@@ -266,7 +266,7 @@ async fn test_bm25_boosts_exact_keyword_matches() {
     let dir = tempdir().expect("Failed to create temp dir");
     let data_path = dir.path();
 
-    let embedder = Arc::new(Embedder::new_with_model(&EmbeddingModel::default(), false).expect("Failed to create embedder"));
+    let embedder = Arc::new(Embedder::new_with_model(&EmbeddingModel::default(), &DevicePreference::Cpu, false).expect("Failed to create embedder"));
     let bm25_index = Arc::new(BM25Index::open(data_path).expect("Failed to create BM25 index"));
     let mut db = VectorDB::new(data_path.to_str().unwrap()).await.expect("Failed to create db");
 
@@ -313,7 +313,7 @@ async fn test_delete_source_removes_from_bm25() {
     let dir = tempdir().expect("Failed to create temp dir");
     let data_path = dir.path();
 
-    let embedder = Arc::new(Embedder::new_with_model(&EmbeddingModel::default(), false).expect("Failed to create embedder"));
+    let embedder = Arc::new(Embedder::new_with_model(&EmbeddingModel::default(), &DevicePreference::Cpu, false).expect("Failed to create embedder"));
     let bm25_index = Arc::new(BM25Index::open(data_path).expect("Failed to create BM25 index"));
     let mut db = VectorDB::new(data_path.to_str().unwrap()).await.expect("Failed to create db");
 
@@ -366,7 +366,7 @@ async fn test_hybrid_search_combines_vector_and_bm25() {
     let dir = tempdir().expect("Failed to create temp dir");
     let data_path = dir.path();
 
-    let embedder = Arc::new(Embedder::new_with_model(&EmbeddingModel::default(), false).expect("Failed to create embedder"));
+    let embedder = Arc::new(Embedder::new_with_model(&EmbeddingModel::default(), &DevicePreference::Cpu, false).expect("Failed to create embedder"));
     let bm25_index = Arc::new(BM25Index::open(data_path).expect("Failed to create BM25 index"));
     let mut db = VectorDB::new(data_path.to_str().unwrap()).await.expect("Failed to create db");
 

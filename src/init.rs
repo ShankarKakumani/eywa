@@ -2,7 +2,7 @@
 //!
 //! Handles first-run setup and model selection.
 
-use crate::config::{Config, EmbeddingModel, RerankerModel};
+use crate::config::{Config, DevicePreference, EmbeddingModel, RerankerModel};
 use anyhow::Result;
 use std::io::{self, Write};
 
@@ -89,6 +89,7 @@ fn run_custom_selection(existing_config: Option<&Config>) -> Result<Config> {
     Ok(Config {
         embedding_model,
         reranker_model,
+        device: DevicePreference::default(),
         version: 1,
     })
 }
