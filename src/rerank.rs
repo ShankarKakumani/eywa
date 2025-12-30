@@ -2,7 +2,8 @@
 //!
 //! Supports multiple reranker models configured via ~/.eywa/config.toml.
 
-use crate::config::{Config, RerankerModel};
+use crate::config::{Config, DevicePreference, RerankerModel};
+use crate::embed::{device_name, resolve_device};
 use anyhow::{Context, Result};
 use candle_core::{Device, Tensor, DType, IndexOp};
 use candle_nn::VarBuilder;
@@ -21,16 +22,25 @@ impl Reranker {
     pub fn new() -> Result<Self> {
         let config = Config::load()?
             .ok_or_else(|| anyhow::anyhow!("Eywa not initialized. Run 'eywa' or 'eywa init' first."))?;
-        Self::new_with_model(&config.reranker_model, true)
+        Self::new_with_model(&config.reranker_model, &config.device, true)
     }
 
-    /// Create a new reranker with a specific model
-    pub fn new_with_model(reranker_model: &RerankerModel, show_progress: bool) -> Result<Self> {
-        let device = Device::Cpu;
+    /// Create a new reranker with a specific model and device preference
+    pub fn new_with_model(
+        reranker_model: &RerankerModel,
+        device_pref: &DevicePreference,
+        show_progress: bool,
+    ) -> Result<Self> {
+        let device = resolve_device(device_pref)?;
         let model_id = reranker_model.hf_id();
 
         if show_progress {
-            eprintln!("  {} ({} MB)", reranker_model.name(), reranker_model.size_mb());
+            eprintln!(
+                "  {} ({} MB) on {}",
+                reranker_model.name(),
+                reranker_model.size_mb(),
+                device_name(&device)
+            );
         }
 
         // Download model files from HuggingFace with progress

@@ -199,11 +199,12 @@ impl Embedder {
 
         let sum_embeddings = (embeddings * mask_expanded)?.sum(1)?;
         let sum_mask = attention_mask_f.sum(1)?.unsqueeze(1)?;
-        let mean_embeddings = sum_embeddings.broadcast_div(&sum_mask)?;
+        // Use recip + mul instead of broadcast_div (more stable on Metal GPU)
+        let mean_embeddings = sum_embeddings.broadcast_mul(&sum_mask.recip()?)?;
 
         // Normalize
         let norms = mean_embeddings.sqr()?.sum(1)?.sqrt()?.unsqueeze(1)?;
-        let normalized = mean_embeddings.broadcast_div(&norms)?;
+        let normalized = mean_embeddings.broadcast_mul(&norms.recip()?)?;
 
         // Convert to Vec<Vec<f32>>
         let embeddings_vec: Vec<Vec<f32>> = normalized.to_vec2()?;

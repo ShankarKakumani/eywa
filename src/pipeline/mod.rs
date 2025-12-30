@@ -338,9 +338,18 @@ impl IngestPipeline {
         // Step 2: Generate embeddings
         let mut all_embeddings: Vec<Vec<f32>> = Vec::with_capacity(chunks_to_embed.len());
 
-        for batch in chunks_to_embed.chunks(EMBEDDING_BATCH_SIZE) {
+        for (batch_idx, batch) in chunks_to_embed.chunks(EMBEDDING_BATCH_SIZE).enumerate() {
             let texts: Vec<String> = batch.iter().map(|c| c.content.clone()).collect();
-            let embeddings = self.embedder.embed_batch(&texts)?;
+            let embeddings = self.embedder.embed_batch(&texts).map_err(|e| {
+                eprintln!(
+                    "Embedding batch {} failed ({} texts, lengths: {:?}): {}",
+                    batch_idx,
+                    texts.len(),
+                    texts.iter().map(|t| t.len()).collect::<Vec<_>>(),
+                    e
+                );
+                e
+            })?;
             all_embeddings.extend(embeddings);
         }
 
@@ -455,9 +464,18 @@ impl IngestPipeline {
 
         // Step 3: Generate embeddings (the slow part - no lock needed!)
         let mut all_embeddings: Vec<Vec<f32>> = Vec::with_capacity(all_chunks.len());
-        for batch in all_chunks.chunks(EMBEDDING_BATCH_SIZE) {
+        for (batch_idx, batch) in all_chunks.chunks(EMBEDDING_BATCH_SIZE).enumerate() {
             let texts: Vec<String> = batch.iter().map(|c| c.content.clone()).collect();
-            let embeddings = self.embedder.embed_batch(&texts)?;
+            let embeddings = self.embedder.embed_batch(&texts).map_err(|e| {
+                eprintln!(
+                    "Embedding batch {} failed ({} texts, lengths: {:?}): {}",
+                    batch_idx,
+                    texts.len(),
+                    texts.iter().map(|t| t.len()).collect::<Vec<_>>(),
+                    e
+                );
+                e
+            })?;
             all_embeddings.extend(embeddings);
         }
 
