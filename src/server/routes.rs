@@ -19,6 +19,15 @@ use eywa::setup::{DownloadProgress, ModelDownloader, ModelInfo};
 use crate::server::{AppState, DownloadJob, DownloadStatus, DownloadTracker, FileProgress};
 use crate::utils::{create_zip, dir_size, extract_text_from_html, extract_title_from_html, lance_db_size, scan_hf_cache};
 
+/// Capitalize device name to match available_devices format (Auto, Cpu, Metal, Cuda)
+fn capitalize_device(name: &str) -> String {
+    let mut chars = name.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+    }
+}
+
 /// Preprocess documents: extract text from PDFs before queuing
 fn preprocess_documents(documents: Vec<DocumentInput>) -> Vec<DocumentInput> {
     documents.into_iter().filter_map(|doc| {
@@ -765,7 +774,7 @@ async fn handle_get_settings() -> impl IntoResponse {
             let response = SettingsResponse {
                 embedding_model: config.embedding_model,
                 reranker_model: config.reranker_model,
-                device: config.device.name().to_string(),
+                device: capitalize_device(config.device.name()),
                 available_devices,
             };
             (StatusCode::OK, Json(json!(response)))
@@ -776,7 +785,7 @@ async fn handle_get_settings() -> impl IntoResponse {
             let response = SettingsResponse {
                 embedding_model: config.embedding_model,
                 reranker_model: config.reranker_model,
-                device: config.device.name().to_string(),
+                device: capitalize_device(config.device.name()),
                 available_devices,
             };
             (StatusCode::OK, Json(json!(response)))

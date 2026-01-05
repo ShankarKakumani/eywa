@@ -1969,6 +1969,10 @@ textarea {
     background: rgba(26, 26, 46, 0.6);
 }
 
+.model-card.clickable {
+    cursor: pointer;
+}
+
 /* Custom Radio Button */
 .model-radio {
     flex-shrink: 0;
@@ -2129,13 +2133,6 @@ textarea {
     color: white;
 }
 
-/* Settings Actions */
-.settings-actions {
-    margin-top: 32px;
-    display: flex;
-    justify-content: flex-end;
-}
-
 .settings-warning {
     margin-top: 24px;
     padding: 12px 16px;
@@ -2168,4 +2165,46 @@ textarea {
     .download-progress {
         min-width: 100%;
     }
+}
+
+/* Skeleton Loader */
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.model-card.skeleton {
+    pointer-events: none;
+}
+
+.skeleton-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.skeleton-text {
+    height: 14px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    margin-bottom: 8px;
+}
+
+.skeleton-text.small {
+    height: 12px;
+    margin-bottom: 0;
+}
+
+.skeleton-pill {
+    width: 80px;
+    height: 40px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
 }

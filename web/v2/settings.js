@@ -10,7 +10,8 @@ const Settings = {
 
     async init() {
         const panel = document.getElementById('settings');
-        panel.innerHTML = '<div class="settings-loading">Loading settings...</div>';
+        // Show skeleton loader that matches actual layout
+        panel.innerHTML = this.renderSkeleton();
 
         try {
             // Load all data in parallel
@@ -65,12 +66,6 @@ const Settings = {
                     </div>
                 </section>
 
-                <div class="settings-actions">
-                    <button class="primary" id="saveSettingsBtn" onclick="Settings.saveSettings()">
-                        Save Changes
-                    </button>
-                </div>
-
                 <div class="settings-warning">
                     <span class="warning-icon">⚠️</span>
                     Changing the embedding model requires re-indexing all documents.
@@ -82,6 +77,43 @@ const Settings = {
         this.checkActiveDownloads();
     },
 
+    renderSkeleton() {
+        const skeletonCard = `
+            <div class="model-card skeleton">
+                <div class="model-radio"><div class="skeleton-circle"></div></div>
+                <div class="model-info">
+                    <div class="skeleton-text" style="width: 60%"></div>
+                    <div class="skeleton-text small" style="width: 40%"></div>
+                </div>
+                <div class="model-status"><div class="skeleton-text" style="width: 80px"></div></div>
+            </div>
+        `;
+        return `
+            <div class="settings-container">
+                <h2>Settings</h2>
+                <section class="settings-section">
+                    <h3>Embedding Model</h3>
+                    <p class="settings-description">Used to convert text into vector embeddings for semantic search.</p>
+                    <div class="model-list">${skeletonCard.repeat(3)}</div>
+                </section>
+                <section class="settings-section">
+                    <h3>Reranker Model</h3>
+                    <p class="settings-description">Improves search result ranking after initial retrieval.</p>
+                    <div class="model-list">${skeletonCard.repeat(2)}</div>
+                </section>
+                <section class="settings-section">
+                    <h3>Device Preference</h3>
+                    <p class="settings-description">Hardware to use for model inference.</p>
+                    <div class="device-pills">
+                        <div class="skeleton-pill"></div>
+                        <div class="skeleton-pill"></div>
+                        <div class="skeleton-pill"></div>
+                    </div>
+                </section>
+            </div>
+        `;
+    },
+
     renderModelList(models, type) {
         return models.map(model => {
             const isSelected = type === 'embedder'
@@ -90,16 +122,18 @@ const Settings = {
             const canSelect = model.downloaded;
             const isDownloading = this.activeDownloads.has(`${type}-${model.id}`);
 
+            // Card is clickable only if model is downloaded
+            const clickHandler = canSelect ? `onclick="Settings.selectModel('${type}', '${model.id}')"` : '';
+
             return `
-                <div class="model-card ${isSelected ? 'selected' : ''} ${!canSelect ? 'disabled' : ''}"
-                     data-model-id="${model.id}" data-model-type="${type}">
+                <div class="model-card ${isSelected ? 'selected' : ''} ${!canSelect ? 'disabled' : ''} ${canSelect ? 'clickable' : ''}"
+                     data-model-id="${model.id}" data-model-type="${type}" ${clickHandler}>
                     <div class="model-radio">
                         <input type="radio" name="${type}-model"
                                id="${type}-${model.id}"
                                value="${model.id}"
                                ${isSelected ? 'checked' : ''}
-                               ${!canSelect ? 'disabled' : ''}
-                               onchange="Settings.selectModel('${type}', '${model.id}')">
+                               ${!canSelect ? 'disabled' : ''}>
                         <label for="${type}-${model.id}"></label>
                     </div>
                     <div class="model-info">
@@ -109,7 +143,7 @@ const Settings = {
                             ${model.dimensions ? ` · ${model.dimensions} dimensions` : ''}
                         </div>
                     </div>
-                    <div class="model-status">
+                    <div class="model-status" onclick="event.stopPropagation()">
                         ${this.renderModelStatus(model, type, isDownloading, isSelected)}
                     </div>
                 </div>
@@ -155,26 +189,69 @@ const Settings = {
         }).join('');
     },
 
-    selectModel(type, modelId) {
+    async selectModel(type, modelId) {
+        // Don't re-select if already selected
+        const currentSelection = type === 'embedder' ? this.selectedEmbedder : this.selectedReranker;
+        if (currentSelection === modelId) return;
+
         if (type === 'embedder') {
             this.selectedEmbedder = modelId;
         } else {
             this.selectedReranker = modelId;
         }
         this.updateModelCards(type);
+        await this.saveSettings();
     },
 
-    selectDevice(device) {
+    async selectDevice(device) {
+        if (this.selectedDevice === device) return;
+
         this.selectedDevice = device;
         document.querySelectorAll('.device-pill').forEach(pill => {
             pill.classList.toggle('selected', pill.textContent.trim() === device);
         });
+        await this.saveSettings();
     },
 
-    updateModelCards(type) {
+    updateModelCards(type, forceRender = false) {
         const listId = type === 'embedder' ? 'embedderList' : 'rerankerList';
-        const models = type === 'embedder' ? this.embedders : this.rerankers;
-        document.getElementById(listId).innerHTML = this.renderModelList(models, type);
+
+        // If force render needed (e.g., after download), re-render entire list
+        if (forceRender) {
+            const models = type === 'embedder' ? this.embedders : this.rerankers;
+            document.getElementById(listId).innerHTML = this.renderModelList(models, type);
+            return;
+        }
+
+        // Otherwise just update visual state (no blink)
+        const selectedId = type === 'embedder' ? this.selectedEmbedder : this.selectedReranker;
+        const container = document.getElementById(listId);
+
+        container.querySelectorAll('.model-card').forEach(card => {
+            const modelId = card.dataset.modelId;
+            const isSelected = modelId === selectedId;
+
+            // Toggle selected class
+            card.classList.toggle('selected', isSelected);
+
+            // Update radio button
+            const radio = card.querySelector('input[type="radio"]');
+            if (radio) radio.checked = isSelected;
+
+            // Update status text
+            const status = card.querySelector('.model-status');
+            if (status && !status.querySelector('.download-progress') && !status.querySelector('.download-btn')) {
+                // Only update if it's a downloaded model (not downloading/not downloaded)
+                if (isSelected) {
+                    status.innerHTML = '<span class="status-downloaded">✓ In Use</span>';
+                } else {
+                    status.innerHTML = `<span class="status-downloaded">✓ Downloaded</span>
+                        <button class="delete-cache-btn" onclick="event.stopPropagation(); Settings.deleteModel('${type}', '${modelId}')" title="Delete cached model">
+                            🗑
+                        </button>`;
+                }
+            }
+        });
     },
 
     async downloadModel(type, modelId) {
@@ -206,7 +283,7 @@ const Settings = {
             this.activeDownloads.set(key, jobId);
 
             // Re-render to show progress bar
-            this.updateModelCards(type);
+            this.updateModelCards(type, true);
 
             // Poll for progress
             this.pollDownloadProgress(type, modelId, jobId);
@@ -277,8 +354,8 @@ const Settings = {
             this.embedders = embeddersRes.models || [];
             this.rerankers = rerankersRes.models || [];
 
-            this.updateModelCards('embedder');
-            this.updateModelCards('reranker');
+            this.updateModelCards('embedder', true);
+            this.updateModelCards('reranker', true);
         } catch (err) {
             console.error('Failed to refresh models:', err);
         }
@@ -326,7 +403,7 @@ const Settings = {
                 if (download.status === 'downloading' || download.status === 'pending') {
                     const key = `${download.model_type}-${download.model_id}`;
                     this.activeDownloads.set(key, download.job_id);
-                    this.updateModelCards(download.model_type);
+                    this.updateModelCards(download.model_type, true);
                     this.pollDownloadProgress(download.model_type, download.model_id, download.job_id);
                 }
             }
@@ -336,10 +413,6 @@ const Settings = {
     },
 
     async saveSettings() {
-        const btn = document.getElementById('saveSettingsBtn');
-        btn.disabled = true;
-        btn.textContent = 'Saving...';
-
         try {
             // Find full model configs
             const embedder = this.embedders.find(m => m.id === this.selectedEmbedder);
@@ -387,13 +460,10 @@ const Settings = {
             } else if (data.model_changed) {
                 Toast.info(data.message, 8000);
             } else {
-                Toast.success(data.message);
+                Toast.success('Settings saved');
             }
         } catch (err) {
             Toast.error(`Failed to save settings: ${err.message}`);
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Save Changes';
         }
     }
 };
