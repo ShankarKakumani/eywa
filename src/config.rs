@@ -441,6 +441,42 @@ pub struct Config {
     /// Version of config schema
     #[serde(default = "current_version")]
     pub version: u32,
+    /// LLM Configuration
+    #[serde(default)]
+    pub llm: LLMConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LLMConfig {
+    /// LLM Provider (openai, local, etc.)
+    #[serde(default)]
+    pub provider: LLMProviderType,
+    /// Model name (e.g. gpt-4o, phi-3-mini)
+    #[serde(default)]
+    pub model: Option<String>,
+    /// API Key (for cloud providers)
+    pub api_key: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum LLMProviderType {
+    #[default]
+    OpenAI,
+    Local,
+    Anthropic,
+    Ollama,
+    Disabled,
+}
+
+impl Default for LLMConfig {
+    fn default() -> Self {
+        Self {
+            provider: LLMProviderType::OpenAI,
+            model: None,
+            api_key: None,
+        }
+    }
 }
 
 fn default_version() -> u32 {
@@ -458,6 +494,7 @@ impl Default for Config {
             reranker_model: RerankerModelConfig::default(),
             device: DevicePreference::default(),
             version: current_version(),
+            llm: LLMConfig::default(),
         }
     }
 }
@@ -499,6 +536,7 @@ impl Config {
                 reranker_model: legacy.reranker_model.to_config(),
                 device: legacy.device,
                 version: current_version(),
+                llm: LLMConfig::default(),
             };
             // Save migrated config
             if let Err(e) = migrated.save() {

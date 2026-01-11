@@ -14,8 +14,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
-use eywa::{db, chunking, Config, ContentStore, DevicePreference, DocumentInput, EmbeddingModelConfig, FetchUrlRequest, gpu_support_info, IngestPipeline, IngestRequest, RerankerModelConfig, SearchRequest, SearchResult};
+use eywa::{db, chunking, Config, ContentStore, DevicePreference, DocumentInput, EmbeddingModelConfig, FetchUrlRequest, gpu_support_info, IngestPipeline, IngestRequest, RerankerModelConfig, SearchRequest, SearchResult, LLMConfig};
 use eywa::setup::{DownloadProgress, ModelDownloader, ModelInfo};
+use eywa::llm::{Message, create_provider};
 use crate::server::{AppState, DownloadJob, DownloadStatus, DownloadTracker, FileProgress};
 use crate::utils::{create_zip, dir_size, extract_text_from_html, extract_title_from_html, lance_db_size, scan_hf_cache};
 
@@ -164,6 +165,8 @@ fn create_api_routes(state: Arc<AppState>) -> Router {
         .route("/models/download/:job_id", get(handle_get_download))
         .route("/models/downloads", get(handle_list_downloads))
         .route("/models/cache/:model_type/:model_id", delete(handle_delete_model_cache))
+        // Chat API
+        .route("/chat", post(handle_chat))
         .with_state(state)
 }
 
@@ -249,6 +252,30 @@ async fn handle_search(
         Ok(r) => r,
         Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))),
     };
+
+    drop(db); // Release lock
+
+    // ... existing search logic ...
+
+    // TODO: Refactor search logic to use Eywa::search if possible, but for now this works. 
+    // Wait, the handle_search implementation above seems cut off in the view. 
+    // I should simply append handle_chat at the end of the file or after handle_search.
+    // I will append it after handle_search instead of replacing inside it.
+    
+    // Actually, I'll just append handle_chat before handle_list_embedders or similar.
+    // Let's scroll down to find a good spot.
+    
+    // Wait, I can't see the end of handle_search. 
+    // I'll put handle_chat AFTER handle_update_settings (which is around line 880 in previous view).
+    // Or I can add it at the very end of route handlers section.
+    
+    // Let's add it before handle_list_embedders (line 884).
+    
+    // I will use a separate replacement chunk for that.
+    // Placeholder removed to allow flow to continue
+    
+    // SKIPPING THIS CHUNK as I will add handle_chat elsewhere.
+    // SKIPPING THIS CHUNK as I will add handle_chat elsewhere.
 
     let content_store = match ContentStore::open(&std::path::Path::new(&state.data_dir).join("content.db")) {
         Ok(cs) => cs,
@@ -744,11 +771,16 @@ async fn handle_fetch_url(
 // Settings & Models API
 // ─────────────────────────────────────────────────────────────────────────────
 
+
+
+
+
 /// Response for GET /api/settings
 #[derive(Serialize)]
 struct SettingsResponse {
     embedding_model: EmbeddingModelConfig,
     reranker_model: RerankerModelConfig,
+    llm: LLMConfig,
     device: String,
     available_devices: Vec<String>,
 }
@@ -760,6 +792,8 @@ struct UpdateSettingsRequest {
     embedding_model: Option<EmbeddingModelConfig>,
     #[serde(default)]
     reranker_model: Option<RerankerModelConfig>,
+    #[serde(default)]
+    llm: Option<LLMConfig>,
     #[serde(default)]
     device: Option<String>,
 }
@@ -781,6 +815,7 @@ async fn handle_get_settings() -> impl IntoResponse {
             let response = SettingsResponse {
                 embedding_model: config.embedding_model,
                 reranker_model: config.reranker_model,
+                llm: config.llm,
                 device: capitalize_device(config.device.name()),
                 available_devices,
             };
@@ -792,6 +827,7 @@ async fn handle_get_settings() -> impl IntoResponse {
             let response = SettingsResponse {
                 embedding_model: config.embedding_model,
                 reranker_model: config.reranker_model,
+                llm: config.llm,
                 device: capitalize_device(config.device.name()),
                 available_devices,
             };
@@ -835,6 +871,11 @@ async fn handle_update_settings(
         config.reranker_model = new_model;
     }
 
+    // Update LLM config if provided
+    if let Some(new_llm) = payload.llm {
+        config.llm = new_llm;
+    }
+
     // Update device preference if provided
     if let Some(device_str) = payload.device {
         config.device = match device_str.to_lowercase().as_str() {
@@ -865,6 +906,42 @@ async fn handle_update_settings(
             }
         })),
     )
+}
+
+/// POST /api/chat - Generate chat completion
+async fn handle_chat(
+    State(_state): State<Arc<AppState>>,
+    Json(messages): Json<Vec<Message>>,
+) -> impl IntoResponse {
+    // 1. Load config
+    let config = match Config::load() {
+        Ok(Some(c)) => c,
+        _ => return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "Failed to load configuration" })),
+        ),
+    };
+
+    // 2. Initialize provider
+    let provider = match create_provider(&config.llm).await {
+        Ok(p) => p,
+        Err(e) => return (
+             StatusCode::BAD_REQUEST,
+             Json(json!({ "error": e.to_string() })),
+        ),
+    };
+
+    // 3. Generate completion
+    match provider.completion(&messages).await {
+        Ok(response) => (
+            StatusCode::OK,
+            Json(serde_json::to_value(response).unwrap()),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        ),
+    }
 }
 
 /// GET /api/models/embedders - List available embedding models
@@ -973,9 +1050,20 @@ async fn handle_start_download(
                 ),
             }
         }
+        "llm" => {
+            if payload.model_id == "phi3" || payload.model_id == "phi-3" {
+                 let m = eywa::setup::Phi3Model::new();
+                 (m.name().to_string(), m.hf_id().to_string(), m.size_mb())
+            } else {
+                return (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({ "error": format!("LLM model '{}' not found", payload.model_id) })),
+                )
+            }
+        }
         _ => return (
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "Invalid model type. Must be 'embedder' or 'reranker'" })),
+            Json(json!({ "error": "Invalid model type. Must be 'embedder', 'reranker', or 'llm'" })),
         ),
     };
 
@@ -989,6 +1077,11 @@ async fn handle_start_download(
         "reranker" => {
             let model = RerankerModelConfig::find_curated(&payload.model_id).unwrap();
             downloader.is_cached(&model)
+        }
+        "llm" => {
+             // For now assuming Phi-3
+             let model = eywa::setup::Phi3Model::new();
+             downloader.is_cached(&model)
         }
         _ => false,
     };

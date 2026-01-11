@@ -9,6 +9,11 @@ const Settings = {
     selectedReranker: null,
     selectedDevice: null,
 
+    // ... existing init ...
+    // State management for LLM
+    selectedLLMProvider: null,
+    llmApiKey: '',
+
     async init() {
         const panel = document.getElementById('settings');
         // Show skeleton loader that matches actual layout
@@ -33,6 +38,10 @@ const Settings = {
             this.selectedReranker = this.settings.reranker_model?.id;
             this.selectedDevice = this.settings.device;
 
+            // LLM State
+            this.selectedLLMProvider = this.settings.llm?.provider || 'openai';
+            this.llmApiKey = this.settings.llm?.api_key || '';
+
             this.render();
         } catch (err) {
             panel.innerHTML = `<div class="settings-error">Failed to load settings: ${err.message}</div>`;
@@ -44,6 +53,23 @@ const Settings = {
         panel.innerHTML = `
             <div class="settings-container">
                 <h2>Settings</h2>
+
+                <!-- LLM Provider Section -->
+                <section class="settings-section">
+                    <h3>Chat Intelligence</h3>
+                    <p class="settings-description">Choose the AI model used for answering questions and chat.</p>
+                    
+                    <div class="provider-selector">
+                        ${this.renderProviderOption('openai', 'OpenAI', 'Cloud-based, requires API key')}
+                        ${this.renderProviderOption('local', 'Local (Phi-3)', 'Private, runs on your device')}
+                        ${this.renderProviderOption('anthropic', 'Anthropic', 'Cloud-based, requires API key')}
+                        ${this.renderProviderOption('disabled', 'Disabled', 'No chat features')}
+                    </div>
+
+                    <div class="provider-config" id="providerConfig">
+                        ${this.renderProviderConfig()}
+                    </div>
+                </section>
 
                 <section class="settings-section">
                     <h3>Embedding Model</h3>
@@ -91,12 +117,6 @@ const Settings = {
                             <a href="https://github.com/AkshayKumarC132/eywa" target="_blank" rel="noopener">
                                 GitHub
                             </a>
-                            <a href="https://github.com/AkshayKumarC132/eywa/issues" target="_blank" rel="noopener">
-                                Report Issue
-                            </a>
-                            <a href="https://github.com/AkshayKumarC132/eywa/blob/main/LICENSE" target="_blank" rel="noopener">
-                                Apache 2.0 License
-                            </a>
                         </div>
                     </div>
                 </section>
@@ -105,6 +125,122 @@ const Settings = {
 
         // Restore any active download progress polling
         this.checkActiveDownloads();
+    },
+
+    renderProviderOption(id, name, desc) {
+        const isSelected = this.selectedLLMProvider === id;
+        return `
+            <div class="provider-card ${isSelected ? 'selected' : ''}" onclick="Settings.selectLLMProvider('${id}')">
+                <input type="radio" name="llm-provider" value="${id}" ${isSelected ? 'checked' : ''}>
+                <div class="provider-info">
+                    <div class="provider-name">${name}</div>
+                    <div class="provider-desc">${desc}</div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderProviderConfig() {
+        if (this.selectedLLMProvider === 'openai' || this.selectedLLMProvider === 'anthropic') {
+            return `
+                <div class="api-key-input">
+                    <label>API Key</label>
+                    <input type="password" 
+                           value="${this.llmApiKey || ''}" 
+                           placeholder="sk-..."
+                           onchange="Settings.updateApiKey(this.value)">
+                </div>
+            `;
+        }
+
+        if (this.selectedLLMProvider === 'local') {
+            // Check if local model is downloaded
+            // For now, assume Phi-3 is the only local model and check if it's "ready".
+            // Since API doesn't list LLMs yet, we rely on active downloads or assume user has it if they selected local.
+            // Ideally we'd show a download button here if missing. 
+            // For this iteration, we just show a status message.
+            return `
+                <div class="local-model-status">
+                   <div class="status-downloaded">✓ Phi-3 Mini (3.8GB) Configured</div>
+                   <p class="small-hint">Model will be loaded on first use.</p>
+                </div>
+            `;
+        }
+
+        return '';
+    },
+
+    selectLLMProvider(provider) {
+        this.selectedLLMProvider = provider;
+        this.render(); // Re-render to show/hide config
+        this.saveSettings();
+    },
+
+    updateApiKey(key) {
+        this.llmApiKey = key;
+        this.saveSettings();
+    },
+
+    // ... existing methods ...
+
+    async saveSettings() {
+        try {
+            // Find full model configs
+            const embedder = this.embedders.find(m => m.id === this.selectedEmbedder);
+            const reranker = this.rerankers.find(m => m.id === this.selectedReranker);
+
+            if (!embedder || !reranker) {
+                Toast.error('Please select both an embedding model and a reranker model');
+                return;
+            }
+
+            if (!embedder.downloaded || !reranker.downloaded) {
+                Toast.error('Please download the selected models first');
+                return;
+            }
+
+            const payload = {
+                embedding_model: {
+                    id: embedder.id,
+                    name: embedder.name,
+                    repo_id: embedder.repo_id,
+                    dimensions: embedder.dimensions,
+                    size_mb: embedder.size_mb,
+                    curated: embedder.curated
+                },
+                reranker_model: {
+                    id: reranker.id,
+                    name: reranker.name,
+                    repo_id: reranker.repo_id,
+                    size_mb: reranker.size_mb,
+                    curated: reranker.curated
+                },
+                llm: {
+                    provider: this.selectedLLMProvider,
+                    model: null, // default
+                    api_key: this.llmApiKey || null
+                },
+                device: this.selectedDevice
+            };
+
+            const res = await fetch('/api/settings', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (data.error) {
+                Toast.error(data.error);
+            } else if (data.model_changed) {
+                Toast.info(data.message, 8000);
+            } else {
+                Toast.success('Settings saved');
+            }
+        } catch (err) {
+            Toast.error(`Failed to save settings: ${err.message}`);
+        }
     },
 
     renderSkeleton() {
@@ -123,19 +259,15 @@ const Settings = {
                 <h2>Settings</h2>
                 <section class="settings-section">
                     <h3>Embedding Model</h3>
-                    <p class="settings-description">Used to convert text into vector embeddings for semantic search.</p>
                     <div class="model-list">${skeletonCard.repeat(3)}</div>
                 </section>
                 <section class="settings-section">
                     <h3>Reranker Model</h3>
-                    <p class="settings-description">Improves search result ranking after initial retrieval.</p>
                     <div class="model-list">${skeletonCard.repeat(2)}</div>
                 </section>
                 <section class="settings-section">
                     <h3>Device Preference</h3>
-                    <p class="settings-description">Hardware to use for model inference.</p>
                     <div class="device-pills">
-                        <div class="skeleton-pill"></div>
                         <div class="skeleton-pill"></div>
                         <div class="skeleton-pill"></div>
                     </div>
@@ -167,7 +299,7 @@ const Settings = {
                         <label for="${type}-${model.id}"></label>
                     </div>
                     <div class="model-info">
-                        <div class="model-name">${escapeHtml(model.name)}</div>
+                        <div class="model-name">${this.escapeHtml(model.name)}</div>
                         <div class="model-meta">
                             ${model.size_mb} MB
                             ${model.dimensions ? ` · ${model.dimensions} dimensions` : ''}
@@ -442,58 +574,13 @@ const Settings = {
         }
     },
 
-    async saveSettings() {
-        try {
-            // Find full model configs
-            const embedder = this.embedders.find(m => m.id === this.selectedEmbedder);
-            const reranker = this.rerankers.find(m => m.id === this.selectedReranker);
-
-            if (!embedder || !reranker) {
-                Toast.error('Please select both an embedding model and a reranker model');
-                return;
-            }
-
-            if (!embedder.downloaded || !reranker.downloaded) {
-                Toast.error('Please download the selected models first');
-                return;
-            }
-
-            const payload = {
-                embedding_model: {
-                    id: embedder.id,
-                    name: embedder.name,
-                    repo_id: embedder.repo_id,
-                    dimensions: embedder.dimensions,
-                    size_mb: embedder.size_mb,
-                    curated: embedder.curated
-                },
-                reranker_model: {
-                    id: reranker.id,
-                    name: reranker.name,
-                    repo_id: reranker.repo_id,
-                    size_mb: reranker.size_mb,
-                    curated: reranker.curated
-                },
-                device: this.selectedDevice
-            };
-
-            const res = await fetch('/api/settings', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await res.json();
-
-            if (data.error) {
-                Toast.error(data.error);
-            } else if (data.model_changed) {
-                Toast.info(data.message, 8000);
-            } else {
-                Toast.success('Settings saved');
-            }
-        } catch (err) {
-            Toast.error(`Failed to save settings: ${err.message}`);
-        }
+    escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 };

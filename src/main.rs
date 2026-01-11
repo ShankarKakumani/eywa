@@ -148,7 +148,7 @@ async fn main() -> Result<()> {
                 None => {
                     // First run - run init
                     show_welcome();
-                    match run_init(None)? {
+                    match run_init(None).await? {
                         InitResult::Configured(config) => {
                             println!("\n\x1b[32m✓\x1b[0m Configuration saved!\n");
 

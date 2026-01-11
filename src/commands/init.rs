@@ -28,7 +28,7 @@ pub async fn run_init_command(data_dir: &str, default: bool) -> Result<()> {
     let marker_path = Path::new(data_dir).join(".reindex_in_progress");
     let interrupted = marker_path.exists();
 
-    match run_init(existing.as_ref())? {
+    match run_init(existing.as_ref()).await? {
         InitResult::Configured(config) => {
             let needs_reindex = existing
                 .map(|e| e.embedding_model != config.embedding_model)

@@ -365,3 +365,25 @@ impl ModelInfo for RerankerModel {
         RerankerModel::size_mb(self)
     }
 }
+
+pub struct Phi3Model;
+
+impl Phi3Model {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl ModelInfo for Phi3Model {
+    fn name(&self) -> &str {
+        "Phi-3-mini-4k-instruct"
+    }
+
+    fn hf_id(&self) -> &str {
+        "microsoft/Phi-3-mini-4k-instruct"
+    }
+
+    fn size_mb(&self) -> u32 {
+        2200 // Approx 2.2GB
+    }
+}
