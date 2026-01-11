@@ -20,6 +20,7 @@ pub mod rerank;
 pub mod search;
 pub mod setup;
 pub mod types;
+pub mod llm;
 
 pub use bm25::{BM25Index, BM25Result, ChunkInput};
 pub use config::{Config, DevicePreference, EmbeddingModel, EmbeddingModelConfig, RerankerModel, RerankerModelConfig};

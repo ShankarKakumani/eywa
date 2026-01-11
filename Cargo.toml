@@ -78,6 +78,7 @@ tantivy = "0.22"
 
 # Async
 futures = "0.3"
+async-trait = "0.1"
 
 # Encoding
 base64 = "0.22"
