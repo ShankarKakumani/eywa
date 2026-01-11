@@ -88,13 +88,13 @@ const Settings = {
                             <span class="about-value">${this.appInfo.gpu_support || 'CPU only'}</span>
                         </div>
                         <div class="about-links">
-                            <a href="https://github.com/AkshayKumarC132/eywa" target="_blank" rel="noopener">
+                            <a href="https://github.com/ShankarKakumani/eywa" target="_blank" rel="noopener">
                                 GitHub
                             </a>
-                            <a href="https://github.com/AkshayKumarC132/eywa/issues" target="_blank" rel="noopener">
+                            <a href="https://github.com/ShankarKakumani/eywa/issues" target="_blank" rel="noopener">
                                 Report Issue
                             </a>
-                            <a href="https://github.com/AkshayKumarC132/eywa/blob/main/LICENSE" target="_blank" rel="noopener">
+                            <a href="https://github.com/ShankarKakumani/eywa/blob/main/LICENSE" target="_blank" rel="noopener">
                                 Apache 2.0 License
                             </a>
                         </div>
